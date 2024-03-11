@@ -17,25 +17,25 @@ with open(point_path, 'r') as file:
   points = list(csv.DictReader(file, delimiter = ','))
 
 #Import Camera Exteriore Orientation Parameters 
-CSV_path = 'data/Ladybug5_plus/Ladybug5_plus_EOP.csv' #specify csv path
+CSV_path = '../data/Ladybug5_plus/Ladybug5_plus_EOP.csv' #specify csv path
 
 with open(CSV_path, 'r') as file:
     Cam_EOP = list(csv.DictReader(file, delimiter = '\t'))
 
 #Import Camera Interior Orientation Parameters 
-CSV_path = 'data/Ladybug5_plus/IOP_Ladybug5_plus.csv' #specify csv path
+CSV_path = '../data/Ladybug5_plus/IOP_Ladybug5_plus.csv' #specify csv path
 
 with open(CSV_path, 'r') as file:
   IOP = list(csv.DictReader(file, delimiter = '\t'))
 
 #Import Exterior Orientation Parameters
-CSV_path = 'data/Ladybug5_plus/Kalamata_20220413-02_TBC_TMX_export_panorama.csv' #specify csv path
+CSV_path = '../data/Ladybug5_plus/Kalamata_20220413-02_TBC_TMX_export_panorama.csv' #specify csv path
 
 with open(CSV_path,'r') as file:
   EOP = list(csv.DictReader(file, delimiter = '\t'))
 
 #Import Ladybug's Stream Specification file
-CSV_path = 'data/Ladybug5_plus/Ladybug_Stream_Specifications.csv' #specify csv path
+CSV_path = '../data/Ladybug5_plus/Ladybug_Stream_Specifications.csv' #specify csv path
 
 with open(CSV_path, 'r') as file:
   Stream_file = list(csv.DictReader(file, delimiter = '\t'))
