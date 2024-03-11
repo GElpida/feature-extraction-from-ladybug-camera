@@ -10,16 +10,16 @@ import csv
 import numpy as np
 
 #Specify output folder 
-folder = r'/home/elpida/diplomatiki/cendroid_test/outputs'
+folder = r''
 
 #Import masks paths
 masks = []
 
-for path in glob.glob(folder + '/*_9_*_mask.jpg'):
+for path in glob.glob(folder + '/*_mask.jpg'):
       masks.append(path)
 
 point = []
-point_name = 't_light' #Specify a name
+point_name = '' #Specify a name
 
 for path in masks:
 
@@ -27,7 +27,8 @@ for path in masks:
 
     #Export information from mask's name and store them in a list
     split_path = path.split('/')
-    split_image_name = split_path[6].split('_')
+    N = len(split_path)
+    split_image_name = split_path[N-1].split('_')
     
     stream_name = split_image_name[0]+'_'+split_image_name[1]+'_'+split_image_name[2]
     image_id = split_image_name[3]
