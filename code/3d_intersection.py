@@ -12,7 +12,7 @@ from matplotlib import cm
 from matplotlib import animation
 
 #Import point image coordinates
-point_path = '../centroids.csv'#'../test_points.csv' #specify csv path
+point_path = '' #specify csv path
 
 with open(point_path, 'r') as file:
   points = list(csv.DictReader(file, delimiter = ','))
