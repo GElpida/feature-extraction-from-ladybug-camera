@@ -12,27 +12,25 @@ from Detectron import *
 #Select model ('COCO','Cityscapes','Crosswalk','Traffic_Sign','Safety_Cones') 
 # and model_type ('OD' , 'IS' , 'P' , 'SS') 
 
-Models = [{'model':'COCO', 'model_type': 'P'}] 
-"""
-[{'model':'Cityscapes', 'model_type': 'P'},
+Models = [{'model':'Cityscapes', 'model_type': 'P'},
           {'model':'COCO', 'model_type': 'P'},
           {'model':'Traffic_Sign', 'model_type': 'OD'},
           {'model':'COCO', 'model_type': 'OD'},
           {'model':'Crosswalk', 'model_type': 'OD'},
           {'model':'Safety_Cones', 'model_type': 'OD'}]
-"""
+
 #Specify image folder 
-folder = r'/home/elpida/diplomatiki/cendroid_test'
+folder = r''
 
 #Import image paths from camera 0 and 1
 images = []
 
-for i in ['0','1','2','3','4']:
+for i in ['0','1','2','3','4','5']: #specify camera id
     for path in glob.glob(folder + '/*_Cam'+i+'_*.jpg'):
         images.append(path)
 
 #Specify output destination 
-directory = r'/home/elpida/diplomatiki/cendroid_test/outputs'
+directory = r''
 
 projects = []
 
@@ -52,7 +50,8 @@ for imagePath in images :
 
     #specify image name
     split_path = imagePath.split('/')
-    split_image_name = split_path[5].split('_') #image name 
+    N = len(split_path)
+    split_image_name = split_path[N-1].split('_') #image name 
 
     stream_name = split_image_name[0]+'_'+split_image_name[1]+'_'+split_image_name[2]
     image_id = split_image_name[4]
