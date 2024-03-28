@@ -1,6 +1,6 @@
 """
 Το συγκεκριμένο αρχείο περιέχει συναρτήσεις απαραίτητες για την εκτέλεση των αρχείων 3d_intersection.py 
-και 2d_intersection.py και θα πρέπει να βρίκεται στον ίδιο φάκελο με τα αρχεία αυτά.
+και 3d_intersection_WGS84.py και θα πρέπει να βρίκεται στον ίδιο φάκελο με τα αρχεία αυτά.
 """
 
 import numpy as np
@@ -50,6 +50,12 @@ def convert2phi_lamda_h(X,Y,Z):
       lamda = pi
     else : 
       lamda = 2*pi
+
+  #Normalize lamda to (-pi,pi)
+  if lamda > pi or lamda == -pi:
+    lamda = -pi + abs(lamda+pi)% (abs(-pi) + abs(pi))
+  if lamda <-pi or lamda == pi:
+    lamda = pi - abs(lamda+pi)% (abs(-pi) + abs(pi))
 
   lamda = lamda*180/pi #degrees
 
@@ -106,6 +112,12 @@ def WGS84_2_EGSA87(X,Y,Z) :
       lamda = pi
     else : 
       lamda = 2*pi
+
+  #Normalize lamda to (-pi,pi)
+  if lamda > pi or lamda == -pi:
+    lamda = -pi + abs(lamda+pi)% (abs(-pi) + abs(pi))
+  if lamda <-pi or lamda == pi:
+    lamda = pi - abs(lamda+pi)% (abs(-pi) + abs(pi))
         
   #Compute φ :
   phi_ini = math.atan((Z*(1+e_tonos2))/math.sqrt((X**2)+(Y**2))) #Initial value of φ
