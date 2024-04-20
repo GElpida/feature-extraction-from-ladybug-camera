@@ -1,10 +1,6 @@
+# What is included
 project
   Cityscapes
-    panoptic
-    sem_seg
   Crosswalk
-    output
   Safety_Cones
-    output
   Traffic_Sign
-    output
