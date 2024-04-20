@@ -11,4 +11,4 @@ The multi-camera [Ladybug 5+](https://www.flir.com/products/ladybug5plus/?vertic
 ## Installation 
 1. [Install Detectron 2](https://detectron2.readthedocs.io/en/latest/tutorials/install.html)
 2. Clone this repository
-3. Create 
+3. Create folder projects
