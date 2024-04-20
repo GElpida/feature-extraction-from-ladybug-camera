@@ -1,5 +1,7 @@
 project
-  Cityscapes
-  Crosswalk
-  Safety_Cones
-  Traffic_Sign
+  -Cityscapes
+    +panoptic
+    +sem_seg
+  -Crosswalk
+  -Safety_Cones
+  -Traffic_Sign
