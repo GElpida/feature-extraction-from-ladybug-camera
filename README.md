@@ -1,5 +1,5 @@
 # feature-extraction-from-ladybug-camera
-For this project a methodology was developed that utilizes data from a Mobile Mapping System -which uses a multi-camera Ladybug as a mapping sensor- to extract features from the Ladybug images and determine their spatial coordinates.
+For this project a methodology was developed that utilizes data from a Mobile Mapping System -which uses a multi-camera Ladybug 5+ as a mapping sensor- to extract features from the Ladybug images and determine their spatial coordinates.
 
 The methodolody uses the [Detectron 2](https://github.com/facebookresearch/detectron2) Computer Vision Framework.
 
