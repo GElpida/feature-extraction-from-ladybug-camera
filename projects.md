@@ -4,5 +4,14 @@
       - panoptic
       - sem_seg
   - Crosswalk
+      - output
+          - evaluation
+          - test
   - Safety_Cones
+      - output
+          - evaluation
+          - test
   - Traffic_Sign
+     - output
+          - evaluation
+          - test
