@@ -49,10 +49,10 @@ class Detector:
 
         elif self.model == 'Cityscapes':
             if model_type == 'SS': #semantic segmentation
-                sys.path.append('./projects/detectron2/projects')
+                sys.path.append('../projects')
                 from projects.DeepLab.deeplab.config import add_deeplab_config
                 add_deeplab_config(self.cfg)
-                self.cfg.merge_from_file('./projects/detectron2/projects/DeepLab/configs/Cityscapes-SemanticSegmentation/deeplab_v3_plus_R_103_os16_mg124_poly_90k_bs16.yaml')
+                self.cfg.merge_from_file('../projects/Cityscapes/sem_seg/deeplab_v3_plus_R_103_os16_mg124_poly_90k_bs16.yaml')
                 self.cfg.MODEL.WEIGHTS = "./projects/Cityscapes/sem_seg/model_final_a8a355.pkl"
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
                 self.cfg.INPUT.CROP.ENABLED = False
