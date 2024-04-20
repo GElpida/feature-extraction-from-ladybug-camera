@@ -69,24 +69,24 @@ class Detector:
 
         elif self.model == 'Crosswalk':
             if model_type == 'OD':
-                self.cfg.merge_from_file('./projects/Crosswalk/output/config.yaml')
-                self.cfg.MODEL.WEIGHTS = './projects/Crosswalk/output/model_final.pth'
+                self.cfg.merge_from_file('../projects/Crosswalk/output/config.yaml')
+                self.cfg.MODEL.WEIGHTS = '../projects/Crosswalk/output/model_final.pth'
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9
                 self.classes = ['','Crosswalk']
             else : print('Invalid model type. Valid model type option : OD')
         
         elif self.model == 'Traffic_Sign':
             if model_type == 'OD':
-                self.cfg.merge_from_file('./projects/Traffic_Sign/output/config.yaml')
-                self.cfg.MODEL.WEIGHTS = './projects/Traffic_Sign/output/model_final.pth'
+                self.cfg.merge_from_file('../projects/Traffic_Sign/output/config.yaml')
+                self.cfg.MODEL.WEIGHTS = '../projects/Traffic_Sign/output/model_final.pth'
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.65
                 self.classes = ["","Attention","Bend_to_left","Bend_to_right","Crosswalk","Fork_road","Give_way","Narrow_road","No_entry","No_left_turn","No_right_turn","No_u_turn","Roundabout_mandatory","Speed_limit_100KM","Speed_limit_110KM","Speed_limit_120KM","Speed_limit_20KM","Speed_limit_30KM","Speed_limit_40KM","Speed_limit_50KM","Speed_limit_60KM","Speed_limit_70KM","Speed_limit_80KM","Speed_limit_90KM","Stop"]
             else : print('Invalid model type. Valid model type option : OD')
 
         elif self.model == 'Safety_Cones':
             if model_type == 'OD':
-                self.cfg.merge_from_file('./projects/Safety_Cones/output/config.yaml')
-                self.cfg.MODEL.WEIGHTS = './projects/Safety_Cones/output/model_final.pth'
+                self.cfg.merge_from_file('../projects/Safety_Cones/output/config.yaml')
+                self.cfg.MODEL.WEIGHTS = '../projects/Safety_Cones/output/model_final.pth'
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
                 self.classes = ['','Safety_Cone']
             else : print('Invalid model type. Valid model type option : OD')
