@@ -1,6 +1,6 @@
 # What is included in folder "projects"
 project
-  Cityscapes
-  Crosswalk
-  Safety_Cones
-  Traffic_Sign
+  1. Cityscapes
+  2. Crosswalk
+  3. Safety_Cones
+  4. Traffic_Sign
