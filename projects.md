@@ -1,6 +1,8 @@
 ### What is included in folder "projects" :
 projects
   - Cityscapes
+      - panoptic
+      - sem_seg
   - Crosswalk
   - Safety_Cones
   - Traffic_Sign
