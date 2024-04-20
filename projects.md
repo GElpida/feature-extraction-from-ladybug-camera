@@ -1,5 +1,5 @@
 ### What is included in folder "projects" :
-1. projects
+projects
   - Cityscapes
       - panoptic
       - sem_seg
