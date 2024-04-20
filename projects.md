@@ -15,5 +15,3 @@
      - output
           - evaluation
           - test
-
-### Cityscapes
