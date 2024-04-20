@@ -1,4 +1,4 @@
-## What is included
+# What is included in folder "projects"
 project
   Cityscapes
   Crosswalk
