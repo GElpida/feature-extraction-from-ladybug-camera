@@ -9,6 +9,6 @@ The methodolody uses the [Detectron 2](https://github.com/facebookresearch/detec
 The multi-camera [Ladybug 5+](https://www.flir.com/products/ladybug5plus/?vertical=machine+vision&segment=iis) is a product of Teledyne FLIR suitable for mobile mapping projects.
 
 ## Installation 
-1. [Install Detectron 2](https://detectron2.readthedocs.io/en/latest/tutorials/install.html)
+1. [Install Detectron 2](https://haroonshakeel.medium.com/detectron2-setup-on-windows-10-and-linux-407e5382df1)
 2. Clone this repository
-3. Create folder projects
+3. Create folder "projects"
