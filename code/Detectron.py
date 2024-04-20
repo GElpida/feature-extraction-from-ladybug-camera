@@ -53,15 +53,15 @@ class Detector:
                 from projects.DeepLab.deeplab.config import add_deeplab_config
                 add_deeplab_config(self.cfg)
                 self.cfg.merge_from_file('../projects/Cityscapes/sem_seg/deeplab_v3_plus_R_103_os16_mg124_poly_90k_bs16.yaml')
-                self.cfg.MODEL.WEIGHTS = "./projects/Cityscapes/sem_seg/model_final_a8a355.pkl"
+                self.cfg.MODEL.WEIGHTS = "../projects/Cityscapes/sem_seg/model_final_a8a355.pkl"
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
                 self.cfg.INPUT.CROP.ENABLED = False
             elif model_type == 'P':
-                sys.path.append('./projects/detectron2/projects')
+                sys.path.append('../projects')
                 from projects.Panoptic_DeepLab.panoptic_deeplab.config import add_panoptic_deeplab_config
                 add_panoptic_deeplab_config(self.cfg)
-                self.cfg.merge_from_file('./projects/detectron2/projects/Panoptic_DeepLab/configs/Cityscapes-PanopticSegmentation/panoptic_deeplab_R_52_os16_mg124_poly_90k_bs32_crop_512_1024.yaml')
-                self.cfg.MODEL.WEIGHTS = "./projects/Cityscapes/panoptic/model_final_bd324a.pkl"
+                self.cfg.merge_from_file('../projects/Cityscapes/panoptic/panoptic_deeplab_R_52_os16_mg124_poly_90k_bs32_crop_512_1024.yaml')
+                self.cfg.MODEL.WEIGHTS = "../projects/Cityscapes/panoptic/model_final_bd324a.pkl"
                 self.stuff_classes = [5,6,7] #0-->road, 5-->pole, 6-->traffic light, 7-->traffic sign
                 self.thing_classes = [5,6,7] #0-->road, 5-->pole, 6-->traffic light, 7-->traffic sign
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.95
