@@ -1,4 +1,4 @@
-#Create folder "projects"
+# Create folder "projects"
 ### What is included in folder "projects" :
 - projects
   - Cityscapes
