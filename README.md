@@ -3,6 +3,9 @@ For this project a methodology was developed that utilizes data from a Mobile Ma
 
 The methodolody uses the [Detectron 2](https://github.com/facebookresearch/detectron2) Computer Vision Framework.
 
+![20344317_20220413_095709_000005_Cam0_output](https://github.com/GElpida/feature-extraction-from-ladybug-camera/assets/162966788/b452abe0-ee09-4dde-897e-fa361077344c) 
+
+
 ## Ladybug 5+
 ![ladybug5plus-frt-red](https://github.com/GElpida/feature-extraction-from-ladybug-camera/assets/162966788/83de8cfa-3f98-4303-8c37-20e5e7db9a97)
 
