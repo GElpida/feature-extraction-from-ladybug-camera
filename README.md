@@ -3,7 +3,7 @@ For this project a methodology was developed that utilizes data from a Mobile Ma
 
 The methodolody uses the [Detectron 2](https://github.com/facebookresearch/detectron2) Computer Vision Framework.
 
-Solarized dark             |  Solarized Ocean
+Detection             |  Mask
 :-------------------------:|:-------------------------:
 ![20344317_20220413_095709_000000_Cam1_output](https://github.com/GElpida/feature-extraction-from-ladybug-camera/assets/162966788/4ce13c9e-8763-4742-9194-af0975926f1d) | ![20344317_20220413_095709_000000_Cam1_COCO_13_0_mask](https://github.com/GElpida/feature-extraction-from-ladybug-camera/assets/162966788/64a4e709-dcc8-4b80-a15b-5fe7dfd94445)
 
