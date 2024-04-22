@@ -7,7 +7,7 @@ Output 1 | Output 2
 ---|--- 
 ![20344317_20220413_095709_000005_Cam0_output](https://github.com/GElpida/feature-extraction-from-ladybug-camera/assets/162966788/8d0d418e-ae61-4b1e-bdcf-d14cfb379736) | ![20344317_20220413_095709_000007_Cam1_output](https://github.com/GElpida/feature-extraction-from-ladybug-camera/assets/162966788/c644c7d6-a202-49ce-b058-ef8507033075)
 
-Feature extraction process |
+Centroid extraction process |
 :---: |
 ![image](https://github.com/GElpida/feature-extraction-from-ladybug-camera/assets/162966788/4237f4b4-6ae3-4bc9-8961-5c7f0627c357) |
 
