@@ -20,3 +20,10 @@ The multi-camera [Ladybug 5+](https://www.flir.com/products/ladybug5plus/?vertic
 1. [Install Detectron 2](https://haroonshakeel.medium.com/detectron2-setup-on-windows-10-and-linux-407e5382df1)
 2. Clone this repository
 3. Create folder [projects](projects.md)
+
+## References
+1. @article{gammakappaoacutenubetarhoalpha2024varepsilonxialphagammaomegagammaacuteeta,
+  title={E$\xi$$\alpha$$\gamma$$\omega$$\gamma$$\acute{\eta}$ $\chi$$\alpha$$\rho$$\alpha$$\kappa$$\tau$$\eta$$\rho$$\iota$$\sigma$$\tau$$\iota$$\kappa$$\acute{\omega}$$\nu$ $\alpha$$\pi${\'o} $\sigma$$\acute{\nu}$$\sigma$$\tau$$\eta$$\mu$$\alpha$ $\kappa$$\iota$$\nu$$\eta$$\tau$$\acute{\eta}$$\varsigma$ $\chi$$\alpha$$\rho$$\tau$o$\gamma$$\rho$$\acute{\alpha}$$\varphi$$\eta$$\sigma$$\eta$$\varsigma$},
+  author={$\Gamma$$\kappa$o$\acute{\nu}$$\beta$$\rho$$\alpha$, E$\lambda$$\pi$$\acute{\iota}$$\delta$$\alpha$},
+  year={2024}
+}
