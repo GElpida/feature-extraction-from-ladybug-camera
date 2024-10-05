@@ -20,6 +20,3 @@ The multi-camera [Ladybug 5+](https://www.flir.com/products/ladybug5plus/?vertic
 1. [Install Detectron 2](https://haroonshakeel.medium.com/detectron2-setup-on-windows-10-and-linux-407e5382df1)
 2. Clone this repository
 3. Create folder [projects](projects.md)
-
-## References
-1. 
