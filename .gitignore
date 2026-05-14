@@ -1,0 +1,27 @@
+# Ignore folders
+/projects/
+/data/GET/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# IDEs
+.idea/          # PyCharm
+.vscode/        # VS Code
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

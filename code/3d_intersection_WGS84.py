@@ -11,31 +11,31 @@ from matplotlib import cm
 from matplotlib import animation
 
 #Import point image coordinates
-point_path = '' #specify csv path
+point_path = './data/Ladybug5_plus/point_image_coordinates_template.csv' #specify csv path
 
 with open(point_path, 'r') as file:
   points = list(csv.DictReader(file, delimiter = ','))
 
 #Import Camera Exteriore Orientation Parameters 
-CSV_path = '../data/Ladybug5_plus/Ladybug5_plus_EOP.csv' #specify csv path
+CSV_path = './data/Ladybug5_plus/Ladybug5_plus_EOP.csv' #specify csv path
 
 with open(CSV_path, 'r') as file:
     Cam_EOP = list(csv.DictReader(file, delimiter = '\t'))
 
 #Import Camera Interior Orientation Parameters 
-CSV_path = '../data/Ladybug5_plus/IOP_Ladybug5_plus.csv' #specify csv path
+CSV_path = './data/Ladybug5_plus/IOP_Ladybug5_plus.csv' #specify csv path
 
 with open(CSV_path, 'r') as file:
   IOP = list(csv.DictReader(file, delimiter = '\t'))
 
 #Import Exterior Orientation Parameters
-CSV_path = '../data/Ladybug5_plus/Kalamata_20220413-02_TBC_TMX_export_panorama.csv' #specify csv path
+CSV_path = './data/Ladybug5_plus/import_locations.csv' #specify csv path
 
 with open(CSV_path,'r') as file:
   EOP = list(csv.DictReader(file, delimiter = '\t'))
 
 #Import Ladybug's Stream Specification file
-CSV_path = '../data/Ladybug5_plus/Ladybug_Stream_Specifications.csv' #specify csv path
+CSV_path = './data/Ladybug5_plus/Ladybug_Stream_Specifications.csv' #specify csv path
 
 with open(CSV_path, 'r') as file:
   Stream_file = list(csv.DictReader(file, delimiter = '\t'))
@@ -110,9 +110,9 @@ for name in p_name:
               phi = float(param['latitude[deg]'])
               lamda = float(param['longitude[deg]'])
               h = float(param['altitude_ellipsoidal[m]'])
-              Rx = float(param['roll[deg]'])*pi/180 
+              Rx = -float(param['roll[deg]'])*pi/180 
               Ry = float(param['pitch[deg]'])*pi/180 
-              Rz = pi - float(param['heading[deg]'])*pi/180
+              Rz = float(param['heading[deg]'])*pi/180
               
               #Ladybug's Center in WGS'84
               Xc,Yc,Zc = convert2XYZ(phi,lamda,h)
@@ -269,7 +269,7 @@ for name in p_name:
 csv_name = point_path+'_WGS84_and_EGSA87_2.csv' #specify csv name
 
 with open(csv_name, 'w') as csvfile:
-     keys = ['point_name','φ[deg]','λ[deg]','h[m]','x[m]','y[m]']
+     keys = ['point_name','phi[deg]','lamda[deg]','h[m]','x[m]','y[m]']
      writer = csv.DictWriter(csvfile, fieldnames=keys)
      writer.writeheader()
      for row in point_list:
@@ -280,7 +280,7 @@ with open(csv_name, 'w') as csvfile:
         phi,lamda,h = convert2phi_lamda_h(X,Y,Z)
         #Convert to EGSA 87:
         X,Y = WGS84_2_EGSA87(X,Y,Z)
-        writer.writerow({'point_name':row[3],'φ[deg]':phi,'λ[deg]':lamda, 'h[m]':h,'x[m]':X,'y[m]':Y})
+        writer.writerow({'point_name':row[3],'phi[deg]':phi,'lamda[deg]':lamda, 'h[m]':h,'x[m]':X,'y[m]':Y})
 
 #Visualaze all points in EGSA 87: 
 plt.rcParams["figure.figsize"] = [20, 20]

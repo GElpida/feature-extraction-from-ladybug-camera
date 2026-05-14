@@ -30,63 +30,75 @@ class Detector:
         #load model config and pretrained model
         if self.model == 'COCO':
            if model_type == 'OD': #object detection
-              self.cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml"))
-              self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml")
-              self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9
-              self.classes = [9,11] # 9-->traffic light, 10-->fire hydrant, 11-->stop sign, 13-->bench
+              self.cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection\\faster_rcnn_X_101_32x8d_FPN_3x.yaml"))
+              self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection\\faster_rcnn_X_101_32x8d_FPN_3x.yaml")
+              self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6
+              self.classes = [2,9,11] # 0-->person, 2-->car, 9-->traffic light, 10-->fire hydrant, 11-->stop sign, 13-->bench
            elif model_type == 'IS': #instance segmentation
-               self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-               self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+               self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation\\mask_rcnn_X_101_32x8d_FPN_3x.yaml"))
+               self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation\\mask_rcnn_X_101_32x8d_FPN_3x.yaml")
                self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6
                self.classes = [9,10,11,13]
            elif model_type == 'P': #panoptic
                self.cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml"))
                self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml")
-               self.stuff_classes = [] #21-->road
-               self.thing_classes = [9,10,11,13] # 9-->traffic light, 10-->fire hydrant, 11-->stop sign, 13-->bench
-               self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
+               self.stuff_classes = [] #21-->road, 28-->house, 29-->light, 37-->tree, 40-->sky, 44-->pavement, 45-->mountain, 50-->building, 52-->wall
+               self.thing_classes = [0,1,2,3,5,6,7] # 0-->person, 1--> bicycle, 2-->car, 3-->motorcycle, 5-->bus, 6-->train, 7-->truck, 9-->traffic light, 10-->fire hydrant, 11-->stop sign, 13-->bench
+               self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.0
            else : print('Invalid model type. Valid model type options : OD, IS, P')
+
+        elif self.model == 'MaskFormer': #not working!!!
+            if model_type == 'P': #panoptic
+               sys.path.append('..\\projects')
+               from projects.Mask2Former.mask2former.config import add_maskformer2_config # Import MaskFormer configs
+               add_maskformer2_config(self.cfg)
+               self.cfg.merge_from_file('..\\projects\\MaskFormer\\panoptic\\maskformer2_R50_bs16_50ep.yaml')
+               self.cfg.MODEL.WEIGHTS = "..\\projects\\MaskFormer\\panoptic\\model_final_94dc52.pkl"
+               self.stuff_classes = [40] #21-->road, 28-->house, 29-->light, 37-->tree, 40-->sky, 44-->pavement, 45-->mountain, 50-->building, 52-->wall
+               self.thing_classes = [0,2] # 0-->person, 1--> bicycle, 2-->car, 3-->motorcycle, 5-->bus, 6-->train, 7-->truck, 9-->traffic light, 10-->fire hydrant, 11-->stop sign, 13-->bench
+               self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 1
+            else : print('Invalid model type. Valid model type options : P')
 
         elif self.model == 'Cityscapes':
             if model_type == 'SS': #semantic segmentation
-                sys.path.append('../projects')
+                sys.path.append('..\\projects')
                 from projects.DeepLab.deeplab.config import add_deeplab_config
                 add_deeplab_config(self.cfg)
-                self.cfg.merge_from_file('../projects/Cityscapes/sem_seg/deeplab_v3_plus_R_103_os16_mg124_poly_90k_bs16.yaml')
-                self.cfg.MODEL.WEIGHTS = "../projects/Cityscapes/sem_seg/model_final_a8a355.pkl"
+                self.cfg.merge_from_file('..\\projects\\Cityscapes\\sem_seg\\deeplab_v3_plus_R_103_os16_mg124_poly_90k_bs16.yaml')
+                self.cfg.MODEL.WEIGHTS = "..\\projects\\Cityscapes\\sem_seg\\model_final_a8a355.pkl"
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
                 self.cfg.INPUT.CROP.ENABLED = False
             elif model_type == 'P':
-                sys.path.append('../projects')
+                sys.path.append('..\\projects')
                 from projects.Panoptic_DeepLab.panoptic_deeplab.config import add_panoptic_deeplab_config
                 add_panoptic_deeplab_config(self.cfg)
-                self.cfg.merge_from_file('../projects/Cityscapes/panoptic/panoptic_deeplab_R_52_os16_mg124_poly_90k_bs32_crop_512_1024.yaml')
-                self.cfg.MODEL.WEIGHTS = "../projects/Cityscapes/panoptic/model_final_bd324a.pkl"
-                self.stuff_classes = [5,6,7] #0-->road, 5-->pole, 6-->traffic light, 7-->traffic sign
-                self.thing_classes = [5,6,7] #0-->road, 5-->pole, 6-->traffic light, 7-->traffic sign
+                self.cfg.merge_from_file('..\\projects\\Cityscapes\\panoptic\\panoptic_deeplab_R_52_os16_mg124_poly_90k_bs32_crop_512_1024.yaml')
+                self.cfg.MODEL.WEIGHTS = "..\\projects\\Cityscapes\\panoptic\\model_final_bd324a.pkl"
+                self.stuff_classes = [5] #0-->road, 5-->pole, 6-->traffic light, 7-->traffic sign
+                self.thing_classes = [5] #0-->road, 5-->pole, 6-->traffic light, 7-->traffic sign
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.95
             else : print('Invalid model type. Valid model type options : SS, P')
 
         elif self.model == 'Crosswalk':
             if model_type == 'OD':
-                self.cfg.merge_from_file('../projects/Crosswalk/output/config.yaml')
-                self.cfg.MODEL.WEIGHTS = '../projects/Crosswalk/output/model_final.pth'
+                self.cfg.merge_from_file('..\\projects\\Crosswalk\\output\\config.yaml')
+                self.cfg.MODEL.WEIGHTS = '..\\projects\\Crosswalk\\output\\model_final.pth'
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9
                 self.classes = ['','Crosswalk']
             else : print('Invalid model type. Valid model type option : OD')
         
         elif self.model == 'Traffic_Sign':
             if model_type == 'OD':
-                self.cfg.merge_from_file('../projects/Traffic_Sign/output/config.yaml')
-                self.cfg.MODEL.WEIGHTS = '../projects/Traffic_Sign/output/model_final.pth'
+                self.cfg.merge_from_file('..\\projects\\Traffic_Sign\\output\\config.yaml')
+                self.cfg.MODEL.WEIGHTS = '..\\projects\\Traffic_Sign\\output\\model_final.pth'
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.65
                 self.classes = ["","Attention","Bend_to_left","Bend_to_right","Crosswalk","Fork_road","Give_way","Narrow_road","No_entry","No_left_turn","No_right_turn","No_u_turn","Roundabout_mandatory","Speed_limit_100KM","Speed_limit_110KM","Speed_limit_120KM","Speed_limit_20KM","Speed_limit_30KM","Speed_limit_40KM","Speed_limit_50KM","Speed_limit_60KM","Speed_limit_70KM","Speed_limit_80KM","Speed_limit_90KM","Stop"]
             else : print('Invalid model type. Valid model type option : OD')
 
         elif self.model == 'Safety_Cones':
             if model_type == 'OD':
-                self.cfg.merge_from_file('../projects/Safety_Cones/output/config.yaml')
-                self.cfg.MODEL.WEIGHTS = '../projects/Safety_Cones/output/model_final.pth'
+                self.cfg.merge_from_file('..\\projects\\Safety_Cones\\output\\config.yaml')
+                self.cfg.MODEL.WEIGHTS = '..\\projects\\Safety_Cones\\output\\model_final.pth'
                 self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
                 self.classes = ['','Safety_Cone']
             else : print('Invalid model type. Valid model type option : OD')
@@ -163,7 +175,7 @@ class Detector:
             
         return outputs
     
-    def output(self, im, outputs, name, directory):
+    def output(self, im, outputs, name, directory, mode="mask"):
     
         im_shape = im.shape
 
@@ -174,20 +186,20 @@ class Detector:
             info = {}
 
             #Export information from image name and store them in a list
-            split_image_name = name.split('_')
+        #    split_image_name = name.split('_')
 
-            stream_name = split_image_name[0]+'_'+split_image_name[1]+'_'+split_image_name[2]
-            image_id = split_image_name[3]
-            Cam_id = split_image_name[4]
+        #    image_id = split_image_name[3]
+        #    Cam_id = split_image_name[4]
 
-            for i in [0,1,2,3,4,5]:
-                if Cam_id == 'Cam'+str(i):
-                    Cam_id = i
+        #    for i in [0,1,2,3,4,5]:
+        #        if Cam_id == 'Cam'+str(i):
+        #            Cam_id = i
 
-            info.update({'stream_name':stream_name, 'image_id':image_id, 'Cam_id':Cam_id, 'instances': outputs})
+        #    info.update({'stream_name':stream_name, 'image_id':image_id, 'Cam_id':Cam_id, 'instances': outputs})
+            info.update({'instances': outputs})
             
             #Save dictionary as a csv file
-            csv_name = directory +'/'+name+'_'+self.model+'_OD.csv' #specify csv name
+            csv_name = directory +'\\'+name+'_'+self.model+'_OD.csv' #specify csv name
 
             with open(csv_name, 'w') as csvfile:
                 keys = info.keys()
@@ -208,22 +220,65 @@ class Detector:
             if panoptic_seg.shape != im_shape:
                panoptic_seg = panoptic_seg[b1:b1+im_shape[0], b3:b3+im_shape[1]]
             
-            for info in my_segments_info:
-                id = info['id']
-                
-                #Remove disabled classes
-                mask = torch.zeros(panoptic_seg.shape)
-                mask[torch.where(panoptic_seg==id)] = torch.ones(len(torch.where(panoptic_seg==id)[0]))
 
-                #Νormalizes mask in range 0 - 255
-                mask = cv2.normalize(cv2.UMat(np.float32(mask)), None, 0, 255, cv2.NORM_MINMAX)
-                
-                #Specify mask's name
-                model = self.model 
-                if 'instance_id' not in info.keys():
-                    info.update({'instance_id':'0'})
-                out_name = name+'_'+model+'_'+str(info['category_id'])+'_'+str(info['instance_id'])+'_mask.jpg' 
-                cv2.imwrite(os.path.join(directory, out_name), mask) #save the output mask
+            if mode == "mask":
+                for info in my_segments_info:
+                    seg_id = info['id']
+                    mask = (panoptic_seg == seg_id).to(torch.uint8)
+                    mask_np = (mask.cpu().numpy() * 255).astype(np.uint8)
+                    model = self.model
+                    if 'instance_id' not in info:
+                        info['instance_id'] = '0'
+                    out_name = f"{name}_{model}_{info['category_id']}_{info['instance_id']}.jpg"
+                    out_path = os.path.join(directory, out_name)
+                    cv2.imwrite(out_path, mask_np)
+
+            elif mode == "blur":
+                # Combine all panoptic masks into one
+                combined_mask = torch.zeros_like(panoptic_seg, dtype=torch.uint8)
+                for info in my_segments_info:
+                    seg_id = info['id']
+                    combined_mask[panoptic_seg == seg_id] = 1
+
+                # Optional external mask
+                external_mask_path = ""  # specify path to external mask if needed
+
+                ext_mask = None
+                if external_mask_path:
+                    ext_mask = cv2.imread(external_mask_path, cv2.IMREAD_GRAYSCALE)
+
+                    if ext_mask is not None:
+                        # Resize if needed
+                        if ext_mask.shape != combined_mask.shape:
+                            ext_mask = cv2.resize(
+                                ext_mask,
+                                (combined_mask.shape[1], combined_mask.shape[0]),
+                                interpolation=cv2.INTER_NEAREST
+                            )
+
+                        # Convert to binary
+                        ext_mask_bin = (ext_mask > 0).astype(np.uint8)
+                        ext_mask_torch = torch.from_numpy(ext_mask_bin)
+
+                        # Intersect masks
+                        combined_mask = torch.min(combined_mask, ext_mask_torch)
+                    else:
+                        print("Warning: External mask could not be loaded. Ignoring it.")
+
+                # Apply blur
+                im_blur = im.copy()
+                blurred = cv2.GaussianBlur(im, (31, 31), 0)
+                mask_np = (combined_mask.cpu().numpy() * 255).astype(np.uint8)
+                im_blur[mask_np == 255] = blurred[mask_np == 255]
+
+                # Apply black outside external mask ONLY if it exists
+                if ext_mask is not None:
+                    im_blur[ext_mask == 0] = 0
+
+                # Save final image
+                out_name = f"{name}_{self.model}_blur.jpg"
+                out_path = os.path.join(directory, out_name)
+                cv2.imwrite(out_path, im_blur)
 
             v = Visualizer(im[:,:,::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1)
             out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), my_segments_info, area_threshold=None, alpha=0.7)
