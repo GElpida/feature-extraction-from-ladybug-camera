@@ -2,6 +2,9 @@
 /projects/
 /data/GET/
 
+#Ignore files
+/code/test_*.py
+
 # Python cache
 __pycache__/
 *.py[cod]

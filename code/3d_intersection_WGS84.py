@@ -10,8 +10,11 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib import animation
 
+#Import everything from file transformations.py
+from transformations import *
+
 #Import point image coordinates
-point_path = './data/Ladybug5_plus/point_image_coordinates_template.csv' #specify csv path
+point_path = './data/GET/point_image_coordinates_template.csv' #specify csv path
 
 with open(point_path, 'r') as file:
   points = list(csv.DictReader(file, delimiter = ','))
@@ -29,13 +32,13 @@ with open(CSV_path, 'r') as file:
   IOP = list(csv.DictReader(file, delimiter = '\t'))
 
 #Import Exterior Orientation Parameters
-CSV_path = './data/Ladybug5_plus/import_locations.csv' #specify csv path
+CSV_path = './data/GET/import_locations.csv' #specify csv path
 
 with open(CSV_path,'r') as file:
   EOP = list(csv.DictReader(file, delimiter = '\t'))
 
 #Import Ladybug's Stream Specification file
-CSV_path = './data/Ladybug5_plus/Ladybug_Stream_Specifications.csv' #specify csv path
+CSV_path = './data/GET/Ladybug_Stream_Specifications.csv' #specify csv path
 
 with open(CSV_path, 'r') as file:
   Stream_file = list(csv.DictReader(file, delimiter = '\t'))
@@ -49,9 +52,6 @@ for row in EOP:
         #Add stream name key in EOP file
         if row['stream_id'] == id['stream_id']:
             row.update({'stream_name':id['stream_name']})
-
-#Import everything from file transformations.py
-from transformations import *
 
 point_list = []
 Ladybug_center = []
@@ -110,10 +110,10 @@ for name in p_name:
               phi = float(param['latitude[deg]'])
               lamda = float(param['longitude[deg]'])
               h = float(param['altitude_ellipsoidal[m]'])
-              Rx = -float(param['roll[deg]'])*pi/180 
+              Rx = float(param['roll[deg]'])*pi/180 
               Ry = float(param['pitch[deg]'])*pi/180 
-              Rz = float(param['heading[deg]'])*pi/180
-              
+              Rz = 2*pi - (float(param['heading[deg]'])*pi/180)
+
               #Ladybug's Center in WGS'84
               Xc,Yc,Zc = convert2XYZ(phi,lamda,h)
               
@@ -126,7 +126,7 @@ for name in p_name:
 
               #Transformation matrix to WGS 84:
               Rt = get_T_ZYX_matrix(Rx,Ry,Rz,Xc,Yc,Zc)
-
+    
       """
       3D equation of straight line in cartesian form: 
       (x-x1)/a = (y-y1)/b = (z-z1)/c
