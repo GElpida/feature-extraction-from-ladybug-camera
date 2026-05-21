@@ -1,6 +1,7 @@
 # Ignore folders
 /projects/
 /data/GET/
+/images/
 
 #Ignore files
 /code/test_*.py
