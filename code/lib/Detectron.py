@@ -181,132 +181,107 @@ class Detector:
         return outputs
     
     def output(self, im, outputs, name, directory, mode="mask"):
-    
-        im_shape = im.shape
 
-        new_im_shape = max(im_shape[0],im_shape[1])
-        
+        # ============================================================
+        # BLUR MODE  —  applies to ALL model types
+        # Blurs detected regions and returns the blurred image.
+        # The caller is responsible for saving (and rotating for Mode B).
+        # ============================================================
+        if mode == "blur":
+            im_blur = im.copy()
+            blurred = cv2.GaussianBlur(im, (31, 31), 0)
+
+            if self.model_type == 'OD':
+                instances = outputs["instances"].to("cpu")
+                if self.model == 'COCO':
+                    keep      = np.isin(instances.pred_classes.numpy(), self.classes)
+                    instances = instances[keep]
+                for box in instances.pred_boxes.tensor.numpy().astype(int):
+                    x1 = max(box[0], 0);  y1 = max(box[1], 0)
+                    im_blur[y1:box[3], x1:box[2]] = blurred[y1:box[3], x1:box[2]]
+
+            elif self.model_type == 'IS':
+                instances = outputs["instances"].to("cpu")
+                if self.model == 'COCO':
+                    keep      = np.isin(instances.pred_classes.numpy(), self.classes)
+                    instances = instances[keep]
+                if instances.has("pred_masks") and len(instances) > 0:
+                    region = instances.pred_masks.numpy().any(axis=0)
+                    im_blur[region] = blurred[region]
+
+            elif self.model_type == 'P':
+                h, w = im.shape[:2]
+                for row in outputs:
+                    panoptic_seg     = row['panoptic_seg']
+                    my_segments_info = row['my_segments_info']
+                pad_v = int((max(h, w) - h) / 2)
+                pad_u = int((max(h, w) - w) / 2)
+                if panoptic_seg.shape[0] != h or panoptic_seg.shape[1] != w:
+                    panoptic_seg = panoptic_seg[pad_v:pad_v+h, pad_u:pad_u+w]
+                region = torch.zeros(h, w, dtype=torch.uint8)
+                for seg_info in my_segments_info:
+                    region[panoptic_seg == seg_info['id']] = 1
+                region_np = region.cpu().numpy().astype(bool)
+                im_blur[region_np] = blurred[region_np]
+
+            elif self.model_type == 'SS':
+                class_map = outputs.cpu().numpy()
+                im_blur[class_map > 0] = blurred[class_map > 0]
+
+            return im_blur   # caller saves
+
+        # ============================================================
+        # MASK MODE (default)  —  save binary masks; return visualisation
+        # ============================================================
+        im_shape     = im.shape
+        new_im_shape = max(im_shape[0], im_shape[1])
+
         if self.model_type == 'OD':
-            
-            info = {}
-
-            #Export information from image name and store them in a list
-        #    split_image_name = name.split('_')
-
-        #    image_id = split_image_name[3]
-        #    Cam_id = split_image_name[4]
-
-        #    for i in [0,1,2,3,4,5]:
-        #        if Cam_id == 'Cam'+str(i):
-        #            Cam_id = i
-
-        #    info.update({'stream_name':stream_name, 'image_id':image_id, 'Cam_id':Cam_id, 'instances': outputs})
-            info.update({'instances': outputs})
-            
-            #Save dictionary as a csv file
-            csv_name = directory +'\\'+name+'_'+self.model+'_OD.csv' #specify csv name
-
+            info = {'instances': outputs}
+            csv_name = os.path.join(directory, f"{name}_{self.model}_OD.csv")
             with open(csv_name, 'w') as csvfile:
-                keys = info.keys()
-                writer = csv.DictWriter(csvfile, fieldnames=keys)
+                writer = csv.DictWriter(csvfile, fieldnames=info.keys())
                 writer.writeheader()
                 writer.writerow(info)
 
         if self.model_type == 'P':
-
             for row in outputs:
-                panoptic_seg = row['panoptic_seg']
+                panoptic_seg     = row['panoptic_seg']
                 my_segments_info = row['my_segments_info']
-
-            #Remove padding from mask 
-            b1 = 0 + int((new_im_shape - im_shape[0])/2) 
-            b3 = 0 + int((new_im_shape - im_shape[1])/2)
-    
+            b1 = int((new_im_shape - im_shape[0]) / 2)
+            b3 = int((new_im_shape - im_shape[1]) / 2)
             if panoptic_seg.shape != im_shape:
-               panoptic_seg = panoptic_seg[b1:b1+im_shape[0], b3:b3+im_shape[1]]
-            
+                panoptic_seg = panoptic_seg[b1:b1+im_shape[0], b3:b3+im_shape[1]]
+            for info in my_segments_info:
+                seg_id  = info['id']
+                mask    = (panoptic_seg == seg_id).to(torch.uint8)
+                mask_np = (mask.cpu().numpy() * 255).astype(np.uint8)
+                if 'instance_id' not in info:
+                    info['instance_id'] = '0'
+                out_name = f"{name}_{self.model}_{info['category_id']}_{info['instance_id']}.jpg"
+                cv2.imwrite(os.path.join(directory, out_name), mask_np)
+            v   = Visualizer(im[:,:,::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1)
+            out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), my_segments_info,
+                                                  area_threshold=None, alpha=0.7)
 
-            if mode == "mask":
-                for info in my_segments_info:
-                    seg_id = info['id']
-                    mask = (panoptic_seg == seg_id).to(torch.uint8)
-                    mask_np = (mask.cpu().numpy() * 255).astype(np.uint8)
-                    model = self.model
-                    if 'instance_id' not in info:
-                        info['instance_id'] = '0'
-                    out_name = f"{name}_{model}_{info['category_id']}_{info['instance_id']}.jpg"
-                    out_path = os.path.join(directory, out_name)
-                    cv2.imwrite(out_path, mask_np)
-
-            elif mode == "blur":
-                # Combine all panoptic masks into one
-                combined_mask = torch.zeros_like(panoptic_seg, dtype=torch.uint8)
-                for info in my_segments_info:
-                    seg_id = info['id']
-                    combined_mask[panoptic_seg == seg_id] = 1
-
-                # Optional external mask
-                external_mask_path = ""  # specify path to external mask if needed
-
-                ext_mask = None
-                if external_mask_path:
-                    ext_mask = cv2.imread(external_mask_path, cv2.IMREAD_GRAYSCALE)
-
-                    if ext_mask is not None:
-                        # Resize if needed
-                        if ext_mask.shape != combined_mask.shape:
-                            ext_mask = cv2.resize(
-                                ext_mask,
-                                (combined_mask.shape[1], combined_mask.shape[0]),
-                                interpolation=cv2.INTER_NEAREST
-                            )
-
-                        # Convert to binary
-                        ext_mask_bin = (ext_mask > 0).astype(np.uint8)
-                        ext_mask_torch = torch.from_numpy(ext_mask_bin)
-
-                        # Intersect masks
-                        combined_mask = torch.min(combined_mask, ext_mask_torch)
-                    else:
-                        print("Warning: External mask could not be loaded. Ignoring it.")
-
-                # Apply blur
-                im_blur = im.copy()
-                blurred = cv2.GaussianBlur(im, (31, 31), 0)
-                mask_np = (combined_mask.cpu().numpy() * 255).astype(np.uint8)
-                im_blur[mask_np == 255] = blurred[mask_np == 255]
-
-                # Apply black outside external mask ONLY if it exists
-                if ext_mask is not None:
-                    im_blur[ext_mask == 0] = 0
-
-                # Save final image
-                out_name = f"{name}_{self.model}_blur.jpg"
-                out_path = os.path.join(directory, out_name)
-                cv2.imwrite(out_path, im_blur)
-
-            v = Visualizer(im[:,:,::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1)
-            out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), my_segments_info, area_threshold=None, alpha=0.7)
-        
         elif self.model_type == 'SS':
-            v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1)
+            v   = Visualizer(im[:,:,::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1)
             out = v.draw_sem_seg(outputs.to("cpu"), area_threshold=None, alpha=0.8)
-        
+
         elif self.model in ['Crosswalk', 'Traffic_Sign', 'Safety_Cones']:
-             MetadataCatalog.get("my_dataset_train").thing_classes = self.classes
-             metadata = MetadataCatalog.get("my_dataset_train")
-             v = Visualizer(im[:,:,::-1], metadata, scale=1)
-             out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-             MetadataCatalog.remove("my_dataset_train")
-        
-        else :
+            MetadataCatalog.get("my_dataset_train").thing_classes = self.classes
+            metadata = MetadataCatalog.get("my_dataset_train")
+            v   = Visualizer(im[:,:,::-1], metadata, scale=1)
+            out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+            MetadataCatalog.remove("my_dataset_train")
+
+        else:
             v = Visualizer(im[:,:,::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1)
             for i in self.classes:
-                out = v.draw_instance_predictions(outputs["instances"][outputs["instances"].pred_classes == i].to("cpu"))
- 
-        output = out.get_image()[:,:,::-1]
+                out = v.draw_instance_predictions(
+                    outputs["instances"][outputs["instances"].pred_classes == i].to("cpu"))
 
-        return output
+        return out.get_image()[:,:,::-1]
 
     def get_od_centroids(self, outputs, image_name):
         """
@@ -355,9 +330,10 @@ class Detector:
 def run_detection(image_folder, models, mode,
                   cal_file=None,
                   output_masks=None,
-                  output_coords=None):
+                  output_coords=None,
+                  output_mode='mask'):
     """
-    Run the full detection pipeline on a folder of images.
+    Run the detection pipeline on a folder of images.
 
     Parameters
     ----------
@@ -368,10 +344,16 @@ def run_detection(image_folder, models, mode,
     cal_file      : str   Path to .cal calibration file (required for mode B).
     output_masks  : str   Destination for mask images  (default: output/masks/).
     output_coords : str   Destination for CSV files    (default: output/coords/).
+    output_mode   : str   'mask' (default) — save binary masks / centroid CSVs
+                                             → produces image_coords.csv
+                          'blur'           — Gaussian-blur detected regions and
+                                             save the blurred images; no coords
+                                             produced.
 
     Returns
     -------
-    str   Absolute path to image_coords.csv.
+    str   'mask' mode: absolute path to image_coords.csv.
+          'blur' mode: absolute path to the blurred-images output folder.
     """
     from Centroid import compute_centroids
 
@@ -396,15 +378,21 @@ def run_detection(image_folder, models, mode,
                      glob.glob(os.path.join(image_folder, '*.png')))
     od_rows = []
 
+    blur_dir = os.path.join(_PROJ_ROOT, 'output', 'blurred')
+    if output_mode == 'blur':
+        os.makedirs(blur_dir, exist_ok=True)
+
     # ---- detection loop ----
     print("=" * 60)
-    print(f"Detection  (Mode {mode})")
+    print(f"Detection  (Mode {mode}, output={output_mode})")
     print("=" * 60)
 
     for imagePath in images:
         name1 = os.path.basename(imagePath)
 
-        if glob.glob(os.path.join(masks_dir, f"{name1}_*.jpg")):
+        # skip-check uses blur_dir for blur mode, masks_dir for mask mode
+        check_dir = blur_dir if output_mode == 'blur' else masks_dir
+        if glob.glob(os.path.join(check_dir, f"{name1}*")):
             print(f"  {name1}  [already processed, skipping]")
             continue
 
@@ -416,26 +404,45 @@ def run_detection(image_folder, models, mode,
         img_det = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE) if mode == 'B' else img
 
         t0 = time.time()
-        for detector in detectors:
-            out = detector.onImage(img_det)
-            if detector.model_type == 'OD':
-                centroids = detector.get_od_centroids(out, name1)
-                if mode == 'B':
-                    m = re.search(r'Cam(\d+)', name1)
-                    cam_id = int(m.group(1)) if m else -1
-                    for c in centroids:
-                        u_rot, v_rot = c['u'], c['v']
-                        c['u']      = v_rot
-                        c['v']      = orig_h - 1 - u_rot
-                        c['cam_id'] = cam_id
-                        c['img_w']  = orig_w
-                        c['img_h']  = orig_h
-                od_rows.extend(centroids)
-            else:
-                detector.output(img_det, out, name1, masks_dir, mode="mask")
+
+        if output_mode == 'blur':
+            # Apply all detectors in sequence; each one blurs on top of the previous.
+            # Detection inference always runs on the original (unblurred) img_det.
+            # Blurred image is saved in detection space (no back-rotation for Mode B).
+            im_blurred = img_det.copy()
+            for detector in detectors:
+                out        = detector.onImage(img_det)
+                im_blurred = detector.output(im_blurred, out, name1, blur_dir, mode="blur")
+            cv2.imwrite(os.path.join(blur_dir, name1), im_blurred)
+
+        else:
+            # mask mode: extract masks / centroids
+            for detector in detectors:
+                out = detector.onImage(img_det)
+                if detector.model_type == 'OD':
+                    centroids = detector.get_od_centroids(out, name1)
+                    if mode == 'B':
+                        m = re.search(r'Cam(\d+)', name1)
+                        cam_id = int(m.group(1)) if m else -1
+                        for c in centroids:
+                            u_rot, v_rot = c['u'], c['v']
+                            c['u']      = v_rot
+                            c['v']      = orig_h - 1 - u_rot
+                            c['cam_id'] = cam_id
+                            c['img_w']  = orig_w
+                            c['img_h']  = orig_h
+                    od_rows.extend(centroids)
+                else:
+                    detector.output(img_det, out, name1, masks_dir, mode="mask")
+
         print(f"  {name1}  [{time.time()-t0:.2f}s]")
 
-    # ---- post-processing ----
+    # ---- blur mode: done here ----
+    if output_mode == 'blur':
+        print(f"\nBlurred images -> {blur_dir}")
+        return blur_dir
+
+    # ---- mask mode: post-processing ----
     coords_csv     = os.path.join(coords_dir, 'image_coords.csv')
     raw_coords_csv = os.path.join(coords_dir, 'raw_coords.csv')
 

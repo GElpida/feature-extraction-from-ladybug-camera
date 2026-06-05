@@ -33,7 +33,7 @@ EOP_CSV = r''        # path to GET EOP CSV; leave empty to skip step 3
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'lib'))
 
-from Detectron           import run_detection
+from Detectron            import run_detection
 from forward_intersection import run_intersection
 
 assert IMAGE_FOLDER, "Set IMAGE_FOLDER in the configuration block."

@@ -1,8 +1,11 @@
 # Feature Extraction from Ladybug Camera
 
-A methodology for extracting urban features (traffic signs, crosswalks, safety cones, road markings, etc.) from a **Mobile Mapping System (MMS)** equipped with a **Teledyne FLIR Ladybug 5+** multi-camera system, and computing their **3D ground coordinates in the Greek EGSA87 coordinate system (EPSG:2100)**.
+A methodology for processing images from a **Mobile Mapping System (MMS)** equipped with a **Teledyne FLIR Ladybug 5+** multi-camera system. Two independent pipelines are provided:
 
-Detection is powered by the [Detectron2](https://github.com/facebookresearch/detectron2) computer vision framework.
+1. **Feature Extraction** — detect urban features (traffic signs, crosswalks, safety cones, etc.) and compute their **3D ground coordinates in the Greek EGSA87 coordinate system (EPSG:2100)** via photogrammetric forward intersection.
+2. **Image Blurring** — apply Gaussian blur to detected objects for privacy masking / anonymisation.
+
+Both pipelines are powered by the [Detectron2](https://github.com/facebookresearch/detectron2) computer vision framework and support all model types (OD, IS, P, SS).
 
 Output 1 | Output 2
 ---|---
@@ -16,70 +19,103 @@ Centroid extraction |
 
 ## Overview
 
-The pipeline takes images from the Ladybug 5+, runs deep-learning-based detection, extracts the image coordinates of detected objects, and finally triangulates their 3D position using photogrammetric forward intersection with known camera Exterior Orientation Parameters (EOP).
-
-Two input modes are supported depending on which image product is available:
+Two input modes are supported depending on which image product is available from the Ladybug:
 
 | | Mode A — Panoramic | Mode B — Raw |
 |---|---|---|
 | **Input** | 360° equirectangular panoramas | Individual raw camera images (Cam0–Cam5) |
+| **Rotation** | None | 90° CW for detection |
 | **Coord. transform** | None (already panoramic) | DistortedSpline (`.cal`) → panoramic |
-| **Output** | `image_coords.csv` → EGSA87 CSV | same |
+
+Both modes feed into the same forward intersection step to produce EGSA87 coordinates, and both support the blur pipeline as an alternative output.
 
 ---
 
-## Pipeline
+## Pipeline 1 — Feature Extraction
 
 ### Mode A — Panoramic images
 
 ```
-Panoramic .jpg  ──►  use_Detectron.py
-                          │
-                 ┌────────┴─────────┐
-              P / SS              OD
-            (segmentation)  (detection)
-                 │                 │
-           masks saved       bbox centres
-                 │            written to
-           Centroid.py       image_coords.csv
-                 │
-         image_coords.csv
-                 │
-                 ▼
-       forward_intersection.py
-       (+ EOP CSV from GPS/IMU)
-                 │
-                 ▼
-         output_EGSA87.csv
+Panoramic .jpg
+      │
+      ▼
+ run_detection()               ← Detectron.py
+      │
+ ┌────┴─────┐
+P / SS      OD
+ │           │
+masks    bbox centres
+ │           │
+Centroid()  write CSV
+      │
+image_coords.csv               ← output/coords/
+      │
+      ▼
+run_intersection()             ← forward_intersection.py
+(+ EOP CSV from GPS/IMU)
+      │
+      ▼
+image_coords_EGSA87.csv        ← output/egsa87/
 ```
 
 ### Mode B — Raw images
 
 ```
-Raw .jpg (Cam0–5)  ──►  use_Detectron.py  (rotate 90° CW)
-                               │
-                      ┌────────┴─────────┐
-                   P / SS              OD
-                      │                 │
-                 masks saved       bbox centres
-                 (rotate CCW)     (unrotated)
-                      │                 │
-                Centroid.py       raw_coords.csv
-                      │
-                raw_coords.csv
-                      │
-                      ▼
-              raw_to_panorama.py
-          (DistortedSpline from .cal)
-                      │
-               image_coords.csv
-                      │
-                      ▼
-          forward_intersection.py
-          (+ EOP CSV from GPS/IMU)
-                      │
-                      ▼
-            output_EGSA87.csv
+Raw .jpg (Cam0–5)
+      │
+      ▼  rotate 90° CW
+ run_detection()               ← Detectron.py
+      │
+ ┌────┴─────┐
+P / SS      OD
+ │           │
+masks    bbox centres
+(unrotate)  (unrotate)
+      │
+raw_coords.csv                 ← output/coords/
+      │
+      ▼
+RawLadybugTransformer          ← raw_to_panorama.py
+(DistortedSpline from .cal)
+      │
+image_coords.csv               ← output/coords/
+      │
+      ▼
+run_intersection()             ← forward_intersection.py
+(+ EOP CSV from GPS/IMU)
+      │
+      ▼
+image_coords_EGSA87.csv        ← output/egsa87/
+```
+
+---
+
+## Pipeline 2 — Image Blurring
+
+Blurs detected regions in-place using Gaussian blur. Works for **all model types**:
+
+| Model type | Blurred region |
+|---|---|
+| OD | Bounding box of each detection |
+| IS | Instance segmentation mask |
+| P | Panoptic segment mask |
+| SS | All non-background pixels |
+
+```
+Images (Mode A or B)
+      │
+      ▼  Mode B: rotate 90° CW for detection
+ run_detection(..., output_mode='blur')
+      │
+      ▼
+Gaussian blur applied to detected regions
+      │
+      ▼
+Blurred image saved in detection space
+(Mode B: portrait orientation, no back-rotation)
+      │
+      ▼
+output/blurred/
 ```
 
 ---
@@ -97,8 +133,9 @@ The [Ladybug 5+](https://www.flir.com/products/ladybug5plus/?vertical=machine+vi
 ```
 code/
   scripts/                       ← scripts the user runs
-    pipeline_mode_a.py           ← end-to-end Mode A (configure & run)
-    pipeline_mode_b.py           ← end-to-end Mode B (configure & run)
+    pipeline_mode_a.py           ← feature extraction, Mode A (panoramic)
+    pipeline_mode_b.py           ← feature extraction, Mode B (raw)
+    pipeline_blur.py             ← image blurring, Mode A or B
 
   lib/                           ← modules (imported by scripts)
     Detectron.py                 ← Detector class + run_detection()
@@ -110,20 +147,20 @@ code/
 
 data/
   Ladybug5_plus/
-    ladybug20344317.cal     ← Ladybug camera calibration file
+    ladybug20344317.cal          ← Ladybug camera calibration file
 
-output/                     ← all outputs land here (gitignored)
-  masks/                    ← Step 1: binary mask images (P / SS detection)
-  coords/                   ← Step 2: image_coords.csv, raw_coords.csv (Mode B)
-  egsa87/                   ← Step 3: <name>_EGSA87.csv
-  panorama/                 ← panorama_from_raw.jpg (stitching only)
+output/                          ← all outputs land here (gitignored)
+  masks/                         ← binary mask images (P / SS, feature extraction)
+  coords/                        ← image_coords.csv, raw_coords.csv (Mode B)
+  egsa87/                        ← <name>_EGSA87.csv (feature extraction)
+  blurred/                       ← blurred images (blur pipeline)
+  panorama/                      ← panorama_from_raw.jpg (stitching)
 
-projects/                   ← pre-trained model weights (see projects.md)
+projects/                        ← pre-trained model weights (see projects.md)
   Cityscapes/panoptic/
   Crosswalk/output/
   Traffic_Sign/output/
   MaskFormer/panoptic/
-  
 ```
 
 ---
@@ -144,14 +181,13 @@ Pre-trained weights and training notebooks are linked in [projects.md](projects.
 
 ---
 
-## Required Inputs
+## Required Inputs — Feature Extraction
 
 | Input | Description |
 |---|---|
 | Image folder | Panoramic `.jpg` (Mode A) or raw Ladybug `.jpg` (Mode B) |
 | `.cal` file | Ladybug calibration file (Mode B only) |
-| EOP CSV | Exterior Orientation Parameters: `panorama_file_name`, `x[m]` or `latitude[deg]`, `y[m]` or `longitude[deg]`, `altitude_ellipsoidal[m]`, `roll[deg]`, `pitch[deg]`, `heading[deg]` |
-| Points CSV | Image observations: `point_name`, `image_name`, `x[px]`, `y[px]` (output of step 1–2) |
+| EOP CSV | Tab-separated: `gps_seconds[s]`, `panorama_file_name`, `latitude[deg]`, `longitude[deg]`, `altitude_ellipsoidal[m]`, `roll[deg]`, `pitch[deg]`, `heading[deg]` |
 
 ---
 
@@ -182,7 +218,7 @@ conda activate detectron2_env
 ```bash
 pip install -r requirements.txt
 ```
-This adds `opencv-python` and `matplotlib` — the only packages the pipeline needs that are not already provided by the Detectron2 environment.
+Adds `opencv-python`, `matplotlib`, and `pyproj` on top of the Detectron2 environment.
 
 **5. Download model weights**
 
@@ -192,9 +228,9 @@ See [projects.md](projects.md) for download links. Place them under `projects/`.
 
 ## Usage
 
-### Step 1 — Detection + image coordinates
+### Feature Extraction (Pipeline 1)
 
-Edit the configuration block at the top of the relevant pipeline script, then run it:
+Edit the configuration block at the top of the relevant script and run:
 
 ```bash
 # Mode A — panoramic images
@@ -204,41 +240,56 @@ python code/scripts/pipeline_mode_a.py
 python code/scripts/pipeline_mode_b.py
 ```
 
-Set in the script:
-- `IMAGE_FOLDER` — absolute path to input images
-- `CAL_FILE` — `.cal` calibration file (Mode B only)
-- `MODELS` — which Detectron2 model(s) to run
-- `EOP_CSV` — path to GET EOP file (leave empty to skip triangulation)
+Configuration variables:
 
-Outputs `output/coords/image_coords.csv`. Segmentation masks go to `output/masks/`.
+| Variable | Description |
+|---|---|
+| `IMAGE_FOLDER` | Absolute path to input images |
+| `CAL_FILE` | Path to `.cal` calibration file (Mode B only) |
+| `MODELS` | List of Detectron2 models to run |
+| `EOP_CSV` | Path to EOP CSV (leave empty to skip triangulation) |
 
-### Step 2 — Forward Intersection
+Outputs:
+- `output/coords/image_coords.csv` — panoramic pixel coordinates
+- `output/masks/` — binary mask images (P / SS models)
+- `output/egsa87/<name>_EGSA87.csv` — 3D ground coordinates (if EOP provided)
 
-```bash
-python forward_intersection.py
-```
-
-Prompts (defaults shown, press Enter to accept):
-- Path to `image_coords.csv` → default `output/coords/image_coords.csv`
-- Path to EOP CSV
-
-EOP format (tab-separated):
-```
-gps_seconds[s]  panorama_file_name  x[m] (or latitude[deg])  y[m] (or longitude[deg])
-altitude_ellipsoidal[m]  roll[deg]  pitch[deg]  heading[deg]
-```
-
-Requires **≥ 2 panorama captures** where the same object is visible.
-
-Outputs `output/egsa87/<input_name>_EGSA87.csv` with columns:
+Output CSV format:
 
 | point_name | X_egsa87 | Y_egsa87 | Z_egsa87 |
 |---|---|---|---|
 
+> **Note:** Forward intersection requires ≥ 2 panorama captures where the same object is visible.
+
+---
+
+### Image Blurring (Pipeline 2)
+
+Edit the configuration block at the top and run:
+
+```bash
+python code/scripts/pipeline_blur.py
+```
+
+Configuration variables:
+
+| Variable | Description |
+|---|---|
+| `IMAGE_FOLDER` | Absolute path to input images |
+| `MODE` | `'A'` (panoramic) or `'B'` (raw Ladybug) |
+| `CAL_FILE` | Path to `.cal` calibration file (Mode B only) |
+| `MODELS` | List of Detectron2 models to run |
+
+Output: `output/blurred/` — one blurred `.jpg` per input image.
+In Mode B the blurred images are saved in detection (portrait) space.
+
+---
+
 ### Panorama stitching from raw images (optional)
 
 ```bash
-python raw_to_panorama.py
+python code/lib/raw_to_panorama.py
 ```
 
-Stitches all raw camera images in a folder into a single equirectangular panorama using the Ladybug calibration file (no external dependencies beyond numpy and opencv).
+Stitches all raw camera images in a folder into a single equirectangular panorama using the Ladybug `.cal` calibration file. No dependencies beyond NumPy and OpenCV.
+Output: `output/panorama/panorama_from_raw.jpg`
