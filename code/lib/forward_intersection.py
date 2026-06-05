@@ -9,7 +9,7 @@ Or run standalone:
     python forward_intersection.py
 
 EOP CSV columns (tab-separated):
-    gps_seconds[s]  panorama_file_name  latitude[deg]  longitude[deg]
+    gps_seconds[s]  panorama_file_name  x[m] or latitude[deg]  y[m] or longitude[deg]
     altitude_ellipsoidal[m]  roll[deg]  pitch[deg]  heading[deg]
 
 EOP name matching:
@@ -84,7 +84,7 @@ def run_intersection(point_path, eop_path,
     ----------
     point_path : str   Path to image_coords.csv
                        (columns: point_name, image_name, x[px], y[px])
-    eop_path   : str   Path to GET EOP CSV (tab-separated, lat/lon format)
+    eop_path   : str   Path to GET EOP CSV (tab-separated)
     W, H       : int   Panorama dimensions in pixels  (default 8000 x 4000)
     K          : int   Neighbourhood kernel size in pixels  (default 3)
     visualize  : bool  Show 3-D ray plot per point  (default True)
@@ -130,14 +130,18 @@ def run_intersection(point_path, eop_path,
             if eop_match is None:
                 continue
 
+            # uncomment if EOP is already in EGSA87 and you want to skip reprojection
+            # Xgr_c = float(eop_match['x[m]'])
+            # Ygr_c = float(eop_match['y[m]'])
+
             Xgr_c, Ygr_c = _to_egsa87.transform(
                 float(eop_match['longitude[deg]']),
                 float(eop_match['latitude[deg]'])
             )
-            h     = float(eop_match['altitude_ellipsoidal[m]'])
-            roll  = float(eop_match['roll[deg]'])
-            pitch = float(eop_match['pitch[deg]'])
-            head  = float(eop_match['heading[deg]'])
+            h     = float(eop_match['altitude_ellipsoidal[m]']) # altitude above ellipsoid
+            roll  = float(eop_match['roll[deg]']) # roll angle in degrees
+            pitch = float(eop_match['pitch[deg]']) #pitch angle in degrees
+            head  = float(eop_match['heading[deg]']) # heading angle in degrees
 
             if [Xgr_c, Ygr_c, h, eop_match['panorama_file_name']] not in Ladybug_center:
                 Ladybug_center.append([Xgr_c, Ygr_c, h, eop_match['panorama_file_name']])
@@ -236,8 +240,8 @@ def run_intersection(point_path, eop_path,
 # ============================================================
 
 if __name__ == '__main__':
-    _default_coords = os.path.join(_BASE, 'output', 'coords', 'image_coords.csv')
-    _default_eop    = os.path.join(_BASE, 'data',   'GET',    'import_locations.csv')
+    _default_coords = os.path.join(_BASE, 'output', 'coords', 'image_coords.csv') # default image coords CSV path from previous step (optionally pre-filled for convenience)
+    _default_eop    = os.path.join(_BASE, '') # default EOP CSV path here (optionally pre-filled for convenience)
 
     point_path = input(f'Image coords CSV [{_default_coords}]: ').strip() or _default_coords
     eop_path   = input(f'EOP CSV          [{_default_eop}]: ').strip()    or _default_eop
