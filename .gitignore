@@ -27,4 +27,4 @@ venv/
 Thumbs.db
 
 # Logs
-*.log
+*.log.vscode/ 
