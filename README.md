@@ -150,7 +150,7 @@ Pre-trained weights and training notebooks are linked in [projects.md](projects.
 |---|---|
 | Image folder | Panoramic `.jpg` (Mode A) or raw Ladybug `.jpg` (Mode B) |
 | `.cal` file | Ladybug calibration file (Mode B only) |
-| EOP CSV | Exterior Orientation Parameters: `panorama_file_name`, `x[m]`, `y[m]`, `altitude_ellipsoidal[m]`, `roll[deg]`, `pitch[deg]`, `heading[deg]` |
+| EOP CSV | Exterior Orientation Parameters: `panorama_file_name`, `x[m]` or `latitude[deg]`, `y[m]` or `longitude[deg]`, `altitude_ellipsoidal[m]`, `roll[deg]`, `pitch[deg]`, `heading[deg]` |
 | Points CSV | Image observations: `point_name`, `image_name`, `x[px]`, `y[px]` (output of step 1–2) |
 
 ---
@@ -215,16 +215,16 @@ Outputs `output/coords/image_coords.csv`. Segmentation masks go to `output/masks
 ### Step 2 — Forward Intersection
 
 ```bash
-python forward_intersection_get.py
+python forward_intersection.py
 ```
 
 Prompts (defaults shown, press Enter to accept):
 - Path to `image_coords.csv` → default `output/coords/image_coords.csv`
-- Path to EOP CSV → default `data/GET/import_locations.csv`
+- Path to EOP CSV
 
 EOP format (tab-separated):
 ```
-gps_seconds[s]  panorama_file_name  latitude[deg]  longitude[deg]
+gps_seconds[s]  panorama_file_name  x[m] (or latitude[deg])  y[m] (or longitude[deg])
 altitude_ellipsoidal[m]  roll[deg]  pitch[deg]  heading[deg]
 ```
 
