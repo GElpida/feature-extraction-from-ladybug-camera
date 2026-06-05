@@ -2,9 +2,8 @@
 /projects/
 /data/GET/
 /images/
-
-#Ignore files
-/code/test_*.py
+/help/
+/output/
 
 # Python cache
 __pycache__/

@@ -1,0 +1,15 @@
+# ============================================================
+# Additional dependencies — install AFTER the Detectron2 env
+# ============================================================
+# Step 1: create the base environment (Python 3.8 + PyTorch + Detectron2):
+#   conda create --name detectron2_env --file detectron2_env.txt
+#   conda activate detectron2_env
+#   (then install Detectron2 itself — see README for platform instructions)
+#
+# Step 2: install the packages below into that same environment:
+#   pip install -r requirements.txt
+# ============================================================
+
+opencv-python>=4.5.0   # image reading, rotation, remap, centroid (cv2)
+matplotlib>=3.5.0      # 3D ray visualisation in forward_intersection.py
+pyproj>=3.0.0          # WGS84 (EPSG:4326) -> EGSA87 (EPSG:2100) in forward_intersection_get.py
