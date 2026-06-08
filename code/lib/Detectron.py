@@ -110,7 +110,7 @@ class Detector:
         
         else :  print('Invalid model. Valid model options : COCO, Cityscapes, Crosswalk, Traffic_Sign, Safety_Cones') 
 
-        self.cfg.MODEL.DEVICE = 'cpu' # cpu or cuda
+        self.cfg.MODEL.DEVICE = 'cuda' # cpu or cuda
         self.cfg.freeze() # Κλειδώνει το CfgNode (config) και όλα τα παράγωγα αυτού 
         self.predictor= DefaultPredictor(self.cfg)
     

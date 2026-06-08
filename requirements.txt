@@ -12,4 +12,6 @@
 
 opencv-python>=4.5.0   # image reading, rotation, remap, centroid (cv2)
 matplotlib>=3.5.0      # 3D ray visualisation in forward_intersection.py
-pyproj>=3.0.0          # WGS84 (EPSG:4326) -> EGSA87 (EPSG:2100) in forward_intersection_get.py
+pyproj>=3.0.0          # WGS84 (EPSG:4326) -> EGSA87 (EPSG:2100) in forward_intersection.py
+networkx>=2.6.0        # association graph construction and clustering (graph_association.py)
+scipy>=1.7.0           # cKDTree spatial indexing + least_squares RANSAC (graph_association.py)
