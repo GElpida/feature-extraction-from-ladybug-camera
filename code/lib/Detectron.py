@@ -35,13 +35,13 @@ class Detector:
         #load model config and pretrained model
         if self.model == 'COCO':
            if model_type == 'OD': #object detection
-              self.cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection\\faster_rcnn_X_101_32x8d_FPN_3x.yaml"))
-              self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection\\faster_rcnn_X_101_32x8d_FPN_3x.yaml")
-              self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6
-              self.classes = [2,9,11] # 0-->person, 2-->car, 9-->traffic light, 10-->fire hydrant, 11-->stop sign, 13-->bench
+              self.cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml"))
+              self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
+              self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
+              self.classes = [9] # 0-->person, 2-->car, 9-->traffic light, 10-->fire hydrant, 11-->stop sign, 13-->bench
            elif model_type == 'IS': #instance segmentation
-               self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation\\mask_rcnn_X_101_32x8d_FPN_3x.yaml"))
-               self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation\\mask_rcnn_X_101_32x8d_FPN_3x.yaml")
+               self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml"))
+               self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml")
                self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6
                self.classes = [9,10,11,13]
            elif model_type == 'P': #panoptic
@@ -110,7 +110,7 @@ class Detector:
         
         else :  print('Invalid model. Valid model options : COCO, Cityscapes, Crosswalk, Traffic_Sign, Safety_Cones') 
 
-        self.cfg.MODEL.DEVICE = 'cpu' # cpu or cuda
+        self.cfg.MODEL.DEVICE = 'cuda' # cpu or cuda
         self.cfg.freeze() # Κλειδώνει το CfgNode (config) και όλα τα παράγωγα αυτού 
         self.predictor= DefaultPredictor(self.cfg)
     
@@ -296,6 +296,13 @@ class Detector:
         instances = outputs['instances'].to('cpu')
         boxes     = instances.pred_boxes.tensor.numpy()   # (N, 4) x1y1x2y2
         classes   = instances.pred_classes.numpy()
+        H_img, W_img = instances.image_size
+
+        # For COCO/IS models filter to only the requested class IDs
+        if self.model == 'COCO' and len(self.classes) > 0 and isinstance(self.classes[0], int):
+            keep  = np.isin(classes, self.classes)
+            boxes   = boxes[keep]
+            classes = classes[keep]
 
         # Build class-name lookup
         if self.model in ['Crosswalk', 'Traffic_Sign', 'Safety_Cones']:
@@ -314,10 +321,13 @@ class Detector:
             except (IndexError, TypeError):
                 cls_name = str(int(cls))
             centroids.append({
-                'point_name': f"{image_name}_{cls_name}_{i}",
-                'image_name': image_name,
-                'u': u,
-                'v': v,
+                'point_name':  f"{image_name}_{cls_name}_{i}",
+                'image_name':  image_name,
+                'cls':         cls_name,
+                'u':           u,
+                'v':           v,
+                'bbox_norm_w': float(box[2] - box[0]) / W_img,
+                'bbox_norm_h': float(box[3] - box[1]) / H_img,
             })
 
         return centroids
@@ -424,7 +434,13 @@ def run_detection(image_folder, models, mode,
                     if mode == 'B':
                         m = re.search(r'Cam(\d+)', name1)
                         cam_id = int(m.group(1)) if m else -1
+                        iop    = transformer.iop.get(cam_id, {})
+                        fx_norm = iop.get('fx_norm', 0.0)
                         for c in centroids:
+                            # angular_w in radians — computed in raw camera frame
+                            # before rotation swap, using pinhole focal length
+                            c['angular_w'] = (c['bbox_norm_w'] / fx_norm
+                                              if fx_norm > 0 else 0.0)
                             u_rot, v_rot = c['u'], c['v']
                             c['u']      = v_rot
                             c['v']      = orig_h - 1 - u_rot
@@ -465,28 +481,36 @@ def run_detection(image_folder, models, mode,
 
 def _write_od_csv_a(rows, path):
     """Write OD centroids as panoramic coords (Mode A)."""
+    import math
     with open(path, 'w', newline='') as f:
         writer = csv.DictWriter(
-            f, fieldnames=['point_name', 'image_name', 'x[px]', 'y[px]'])
+            f, fieldnames=['point_name', 'image_name', 'cls',
+                           'x[px]', 'y[px]', 'angular_w'])
         writer.writeheader()
         for r in rows:
             writer.writerow({'point_name': r['point_name'],
                              'image_name': r['image_name'],
-                             'x[px]': r['u'], 'y[px]': r['v']})
+                             'cls':        r.get('cls', ''),
+                             'x[px]':      r['u'],
+                             'y[px]':      r['v'],
+                             'angular_w':  r.get('bbox_norm_w', 0.0) * 2.0 * math.pi})
 
 
 def _write_od_csv_b(rows, path):
     """Write OD centroids as raw landscape coords (Mode B)."""
     with open(path, 'w', newline='') as f:
         writer = csv.DictWriter(
-            f, fieldnames=['point_name', 'image_name', 'cam_id',
-                           'img_w', 'img_h', 'raw_x[px]', 'raw_y[px]'])
+            f, fieldnames=['point_name', 'image_name', 'cls', 'cam_id',
+                           'img_w', 'img_h', 'raw_x[px]', 'raw_y[px]',
+                           'angular_w'])
         writer.writeheader()
         for r in rows:
             writer.writerow({'point_name': r['point_name'],
                              'image_name': r['image_name'],
+                             'cls':        r.get('cls', ''),
                              'cam_id':     r.get('cam_id', -1),
                              'img_w':      r.get('img_w', 0),
                              'img_h':      r.get('img_h', 0),
                              'raw_x[px]':  r['u'],
-                             'raw_y[px]':  r['v']})
+                             'raw_y[px]':  r['v'],
+                             'angular_w':  r.get('angular_w', 0.0)})

@@ -359,13 +359,16 @@ class RawLadybugTransformer:
             out_rows.append({
                 'point_name': row['point_name'],
                 'image_name': pano_name,
+                'cls':        row.get('cls', ''),
                 'x[px]':      u_pano,
                 'y[px]':      v_pano,
+                'angular_w':  row.get('angular_w', 0.0),
             })
 
         with open(output_csv, 'w', newline='') as f:
             writer = csv.DictWriter(
-                f, fieldnames=['point_name', 'image_name', 'x[px]', 'y[px]'])
+                f, fieldnames=['point_name', 'image_name', 'cls',
+                               'x[px]', 'y[px]', 'angular_w'])
             writer.writeheader()
             writer.writerows(out_rows)
 
