@@ -24,99 +24,81 @@ Two input modes are supported depending on which image product is available from
 | | Mode A — Panoramic | Mode B — Raw |
 |---|---|---|
 | **Input** | 360° equirectangular panoramas | Individual raw camera images (Cam0–Cam5) |
-| **Rotation** | None | 90° CW for detection |
+| **Rotation** | None | 90° CW before detection, unrotated after |
 | **Coord. transform** | None (already panoramic) | DistortedSpline (`.cal`) → panoramic |
 
-Both modes feed into the same forward intersection step to produce EGSA87 coordinates, and both support the blur pipeline as an alternative output.
+Both modes produce the same `image_coords.csv` format and feed into the same 3D coordinate computation step.
 
 ---
 
 ## Pipeline 1 — Feature Extraction
 
-### Mode A — Panoramic images
+### Data flow
 
 ```
-Panoramic .jpg
+Image folder (.jpg)
       │
-      ▼
- run_detection()               ← Detectron.py
+      ▼  [Mode B only: rotate 90° CW]
+run_detection()                   ← Detectron.py
       │
- ┌────┴─────┐
-P / SS      OD
- │           │
-masks    bbox centres
- │           │
-Centroid()  write CSV
-      │
-image_coords.csv               ← output/coords/
-      │
-      ▼
-run_intersection()             ← forward_intersection.py
-(+ EOP CSV from GPS/IMU)
-      │
-      ▼
-image_coords_EGSA87.csv        ← output/egsa87/
+ ┌────┴───────────────┐
+OD (bounding boxes)   P / SS (masks)
+ │                     │
+ │                    Centroid.py
+ │                     │
+ └──────────┬──────────┘
+            │
+            ▼  [Mode B only]
+   raw_coords.csv                 ← output/coords/
+            │
+            ▼  [Mode B only]
+   RawLadybugTransformer          ← raw_to_panorama.py
+   (DistortedSpline from .cal)
+            │
+            ▼
+   image_coords.csv               ← output/coords/
+            │
+      ┌─────┴──────────────────────────────┐
+      │                                    │
+      ▼                                    ▼
+associate()                      run_intersection()
+← point_association.py           ← forward_intersection.py
+(recommended for OD)             (for P / SS masks)
+      │                                    │
+      ▼                                    ▼
+*_associated_EGSA87.csv          *_EGSA87.csv
+                  └──────────────────────┘
+                           │
+                     output/egsa87/
 ```
 
-### Mode B — Raw images
+### 3D coordinate methods
 
-```
-Raw .jpg (Cam0–5)
-      │
-      ▼  rotate 90° CW
- run_detection()               ← Detectron.py
-      │
- ┌────┴─────┐
-P / SS      OD
- │           │
-masks    bbox centres
-(unrotate)  (unrotate)
-      │
-raw_coords.csv                 ← output/coords/
-      │
-      ▼
-RawLadybugTransformer          ← raw_to_panorama.py
-(DistortedSpline from .cal)
-      │
-image_coords.csv               ← output/coords/
-      │
-      ▼
-run_intersection()             ← forward_intersection.py
-(+ EOP CSV from GPS/IMU)
-      │
-      ▼
-image_coords_EGSA87.csv        ← output/egsa87/
-```
+Two methods are available, selected via `INTERSECTION_MODE` in the notebook:
+
+| `INTERSECTION_MODE` | Method | Best for |
+|---|---|---|
+| `'association'` | Multi-view graph grouping + WLS forward intersection | OD (object detection) |
+| `'intersection'` | N-ray WLS per named point (K×K pixel neighbourhood, Gaussian weights) | P / SS (masks) |
+
+**Association** (`point_association.py`): groups detections of the same physical object across captures using a graph where edges require matching class, ray proximity (≤ 0.15 m), positive depth, and object distance ≤ 20 m from the camera. Connected components with ≥ 2 observations are triangulated. Output includes one row per confirmed real-world object.
+
+**Intersection** (`forward_intersection.py`): groups observations by `point_name`, applies a K×K pixel neighbourhood around each centroid, selects the best ray per image using Gaussian weights, and solves via weighted least squares. Requires ≥ 2 observations per point.
 
 ---
 
 ## Pipeline 2 — Image Blurring
 
-Blurs detected regions in-place using Gaussian blur. Works for **all model types**:
+Detects objects and blurs their regions in-place using Gaussian blur `(31×31, σ=0)`:
 
 | Model type | Blurred region |
 |---|---|
-| OD | Bounding box of each detection |
-| IS | Instance segmentation mask |
+| OD | Bounding box |
+| IS | Instance mask |
 | P | Panoptic segment mask |
 | SS | All non-background pixels |
 
-```
-Images (Mode A or B)
-      │
-      ▼  Mode B: rotate 90° CW for detection
- run_detection(..., output_mode='blur')
-      │
-      ▼
-Gaussian blur applied to detected regions
-      │
-      ▼
-Blurred image saved in detection space
-(Mode B: portrait orientation, no back-rotation)
-      │
-      ▼
-output/blurred/
-```
+Run via `code/scripts/pipeline_blur.py`. Output: `output/blurred/` — one blurred `.jpg` per input image. In Mode B the blurred images are saved in detection (portrait) orientation.
 
 ---
 
@@ -132,35 +114,36 @@ The [Ladybug 5+](https://www.flir.com/products/ladybug5plus/?vertical=machine+vi
 
 ```
 code/
-  scripts/                       ← scripts the user runs
-    pipeline_mode_a.py           ← feature extraction, Mode A (panoramic)
-    pipeline_mode_b.py           ← feature extraction, Mode B (raw)
-    pipeline_blur.py             ← image blurring, Mode A or B
+  scripts/
+    pipeline.ipynb          ← main notebook — run this
+    pipeline_blur.py        ← image blurring (standalone script)
 
-  lib/                           ← modules (imported by scripts)
-    Detectron.py                 ← Detector class + run_detection()
-    Centroid.py                  ← centroid extraction from segmentation masks
-    raw_to_panorama.py           ← raw pixel → panoramic coordinate transformer
-                                    + image stitching (raw → panorama)
-    forward_intersection.py      ← run_intersection(): N-ray triangulation,
-                                    GET EOP format (lat/lon → EGSA87 via pyproj)
+  lib/
+    Detectron.py            ← Detector class + run_detection()
+    Centroid.py             ← centroid extraction from segmentation masks
+    raw_to_panorama.py      ← raw pixel → panoramic coord + image stitching
+    forward_intersection.py ← N-ray WLS triangulation (per named point)
+    point_association.py    ← graph-based grouping + WLS triangulation
 
 data/
   Ladybug5_plus/
-    ladybug20344317.cal          ← Ladybug camera calibration file
+    ladybug20344317.cal     ← Ladybug 5+ camera calibration
 
-output/                          ← all outputs land here (gitignored)
-  masks/                         ← binary mask images (P / SS, feature extraction)
-  coords/                        ← image_coords.csv, raw_coords.csv (Mode B)
-  egsa87/                        ← <name>_EGSA87.csv (feature extraction)
-  blurred/                       ← blurred images (blur pipeline)
-  panorama/                      ← panorama_from_raw.jpg (stitching)
+output/                     ← all outputs (gitignored)
+  masks/                    ← binary mask images (P / SS models)
+  coords/                   ← image_coords.csv, raw_coords.csv
+  egsa87/                   ← *_EGSA87.csv, *_associated_EGSA87.csv
+  blurred/                  ← blurred images
+  panorama/                 ← panorama_from_raw.jpg
 
-projects/                        ← pre-trained model weights (see projects.md)
-  Cityscapes/panoptic/
+projects/                   ← pre-trained model weights (see projects.md)
   Crosswalk/output/
   Traffic_Sign/output/
+  Cityscapes/panoptic/
   MaskFormer/panoptic/
+
+help/
+  visualize_coords.py       ← debug: draw detections on raw/panoramic images
 ```
 
 ---
@@ -172,7 +155,7 @@ projects/                        ← pre-trained model weights (see projects.md)
 | `COCO` | OD / IS / P | person, car, traffic light, stop sign, … |
 | `Cityscapes` | SS / P | road, pole, traffic light, traffic sign, … |
 | `Crosswalk` | OD | Crosswalk |
-| `Traffic_Sign` | OD | 24 sign classes (Stop, Speed limits, Give way, …) |
+| `Traffic_Sign` | OD | 24 sign classes (Stop, Speed limits, Give way, Attention, …) |
 | `Safety_Cones` | OD | Safety Cone |
 
 Model types: **OD** = object detection, **IS** = instance segmentation, **P** = panoptic segmentation, **SS** = semantic segmentation.
@@ -181,13 +164,27 @@ Pre-trained weights and training notebooks are linked in [projects.md](projects.
 
 ---
 
-## Required Inputs — Feature Extraction
+## Required Inputs
 
 | Input | Description |
 |---|---|
-| Image folder | Panoramic `.jpg` (Mode A) or raw Ladybug `.jpg` (Mode B) |
-| `.cal` file | Ladybug calibration file (Mode B only) |
-| EOP CSV | Tab-separated: `gps_seconds[s]`, `panorama_file_name`, `latitude[deg]`, `longitude[deg]`, `altitude_ellipsoidal[m]`, `roll[deg]`, `pitch[deg]`, `heading[deg]` |
+| Image folder | Panoramic `.jpg` (Mode A) or raw Ladybug `.jpg` per camera (Mode B) |
+| `.cal` file | Ladybug calibration file — required for Mode B |
+| EOP CSV | Tab-separated exterior orientation parameters (see format below) |
+
+**EOP CSV columns** (tab-separated):
+
+| Column | Description |
+|---|---|
+| `panorama_file_name` | Must match `image_name` in `image_coords.csv` exactly |
+| `latitude[deg]` | WGS84 latitude |
+| `longitude[deg]` | WGS84 longitude |
+| `altitude_ellipsoidal[m]` | Ellipsoidal height |
+| `roll[deg]` | Platform roll |
+| `pitch[deg]` | Platform pitch |
+| `heading[deg]` | Platform heading |
+
+> In Mode B, `panorama_file_name` must match the raw filename with the `_Cam<N>` suffix stripped (e.g. `pano_0001_0042_Cam2.jpg` → `pano_0001_0042`).
 
 ---
 
@@ -218,7 +215,7 @@ conda activate detectron2_env
 ```bash
 pip install -r requirements.txt
 ```
-Adds `opencv-python`, `matplotlib`, and `pyproj` on top of the Detectron2 environment.
+Adds `opencv-python`, `matplotlib`, `scipy`, `networkx`, and `pyproj` on top of the Detectron2 environment.
 
 **5. Download model weights**
 
@@ -228,60 +225,52 @@ See [projects.md](projects.md) for download links. Place them under `projects/`.
 
 ## Usage
 
-### Feature Extraction (Pipeline 1)
+### Feature Extraction
 
-Edit the configuration block at the top of the relevant script and run:
+Open `code/scripts/pipeline.ipynb` in VS Code or JupyterLab and run the cells in order.
 
-```bash
-# Mode A — panoramic images
-python code/scripts/pipeline_mode_a.py
-
-# Mode B — raw Ladybug images
-python code/scripts/pipeline_mode_b.py
-```
-
-Configuration variables:
+**Cell 1 — Configuration** (only cell that needs editing):
 
 | Variable | Description |
 |---|---|
-| `IMAGE_FOLDER` | Absolute path to input images |
+| `MODE` | `'A'` for panoramic images, `'B'` for raw Ladybug images |
+| `IMAGE_FOLDER` | Absolute path to folder with input `.jpg` images |
 | `CAL_FILE` | Path to `.cal` calibration file (Mode B only) |
-| `MODELS` | List of Detectron2 models to run |
-| `EOP_CSV` | Path to EOP CSV (leave empty to skip triangulation) |
+| `MODELS` | List of `{'model': ..., 'model_type': ...}` dicts |
+| `EOP_CSV` | Path to EOP CSV; leave empty to skip 3D computation |
+| `INTERSECTION_MODE` | `'association'` (OD) or `'intersection'` (P / SS) |
 
-Outputs:
-- `output/coords/image_coords.csv` — panoramic pixel coordinates
-- `output/masks/` — binary mask images (P / SS models)
-- `output/egsa87/<name>_EGSA87.csv` — 3D ground coordinates (if EOP provided)
+**Cell 2 — Imports**: sets up `sys.path` and imports all modules.
 
-Output CSV format:
+**Cell 3 — Step 1: Detection**: runs all models, writes `output/coords/image_coords.csv`.
+
+**Cell 4 — (Optional) coords override**: set `_coords_override` to an existing `image_coords.csv` path to run Step 2 without re-running detection. Must point to `image_coords.csv`, not `raw_coords.csv`.
+
+**Cell 5 — Step 2: 3D Coordinates**: reads `image_coords.csv` + EOP CSV, writes to `output/egsa87/`.
+
+**Output CSV — `association` mode** (`*_associated_EGSA87.csv`):
+
+| object_id | cls | X_egsa87 | Y_egsa87 | Z_egsa87 | n_obs | residual_m | image_ids | detection_ids |
+|---|---|---|---|---|---|---|---|---|
+
+**Output CSV — `intersection` mode** (`*_EGSA87.csv`):
 
 | point_name | X_egsa87 | Y_egsa87 | Z_egsa87 |
 |---|---|---|---|
 
-> **Note:** Forward intersection requires ≥ 2 panorama captures where the same object is visible.
+> Both modes require ≥ 2 captures where the same object is visible.
 
 ---
 
-### Image Blurring (Pipeline 2)
+### Image Blurring
 
-Edit the configuration block at the top and run:
+Edit the configuration block at the top of `code/scripts/pipeline_blur.py` and run:
 
 ```bash
 python code/scripts/pipeline_blur.py
 ```
 
-Configuration variables:
-
-| Variable | Description |
-|---|---|
-| `IMAGE_FOLDER` | Absolute path to input images |
-| `MODE` | `'A'` (panoramic) or `'B'` (raw Ladybug) |
-| `CAL_FILE` | Path to `.cal` calibration file (Mode B only) |
-| `MODELS` | List of Detectron2 models to run |
-
 Output: `output/blurred/` — one blurred `.jpg` per input image.
-In Mode B the blurred images are saved in detection (portrait) space.
 
 ---
 
@@ -291,5 +280,4 @@ In Mode B the blurred images are saved in detection (portrait) space.
 python code/lib/raw_to_panorama.py
 ```
 
-Stitches all raw camera images in a folder into a single equirectangular panorama using the Ladybug `.cal` calibration file. No dependencies beyond NumPy and OpenCV.
-Output: `output/panorama/panorama_from_raw.jpg`
+Stitches all raw Cam0–Cam5 images into a single 8000×4000 equirectangular panorama using the Ladybug `.cal` calibration file. Output: `output/panorama/panorama_from_raw.jpg`.

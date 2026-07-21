@@ -17,7 +17,7 @@ venv/
 
 # IDEs
 .idea/          # PyCharm
-.vscode/        # VS Code
+.vscode # VS Code
 
 # Jupyter
 .ipynb_checkpoints/
@@ -27,5 +27,5 @@ venv/
 Thumbs.db
 
 # Logs
-*.log.vscode/ 
-".vscode/" 
+*.log.vscode/  
+.vscode
