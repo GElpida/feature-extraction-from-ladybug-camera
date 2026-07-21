@@ -38,7 +38,7 @@ class Detector:
               self.cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml"))
               self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
               self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
-              self.classes = [9] # 0-->person, 2-->car, 9-->traffic light, 10-->fire hydrant, 11-->stop sign, 13-->bench
+              self.classes = [9,11] # 0-->person, 2-->car, 9-->traffic light, 10-->fire hydrant, 11-->stop sign, 13-->bench
            elif model_type == 'IS': #instance segmentation
                self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml"))
                self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml")
@@ -96,7 +96,7 @@ class Detector:
             if model_type == 'OD':
                 self.cfg.merge_from_file(os.path.join(_PROJECTS, 'Traffic_Sign', 'output', 'config.yaml'))
                 self.cfg.MODEL.WEIGHTS = os.path.join(_PROJECTS, 'Traffic_Sign', 'output', 'model_final.pth')
-                self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
+                self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.55
                 self.classes = ["","Attention","Bend_to_left","Bend_to_right","Crosswalk","Fork_road","Give_way","Narrow_road","No_entry","No_left_turn","No_right_turn","No_u_turn","Roundabout_mandatory","Speed_limit_100KM","Speed_limit_110KM","Speed_limit_120KM","Speed_limit_20KM","Speed_limit_30KM","Speed_limit_40KM","Speed_limit_50KM","Speed_limit_60KM","Speed_limit_70KM","Speed_limit_80KM","Speed_limit_90KM","Stop"]
             else : print('Invalid model type. Valid model type option : OD')
 
